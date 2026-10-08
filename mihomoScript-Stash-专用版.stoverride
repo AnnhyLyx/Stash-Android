@@ -1,0 +1,1133 @@
+# MihomoScript → Stash 专用版
+# 目标：Stash iOS / macOS / Android 原生 .stoverride
+# 核心：使用 Stash 原生 include-all + filter 动态读取当前订阅节点。
+# 不接管 mixed-port / TUN / external-controller / NTP 等系统级配置。
+# 不修改原订阅的 proxies / proxy-providers；机场更新后节点自动进入策略组。
+# 原 JS 中依赖运行时 JavaScript 的节点重命名/hosts 动态改写等逻辑，
+# 本版只保留能由 Stash 原生配置稳定实现的部分。
+#
+name: MihomoScript Stash 专用版
+desc: Stash 原生 Override；地区自动测速、服务分流、DNS/Hosts、规则集和国外 QUIC 拦截。
+author: OpenAI / based on user-provided mihomoScript.js
+version: 2.0.1
+
+dns: #!replace
+  enable: true
+  ipv6: true
+  use-hosts: true
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/15
+  fake-ip-range6: 2001:2::1/48
+  fake-ip-filter:
+  - localhost
+  - '*.lan'
+  - '*.local'
+  - time.*.com
+  - time.*.gov
+  - time.*.edu.cn
+  - time.*.apple.com
+  - '*.ntp.org.cn'
+  - '*.pool.ntp.org'
+  default-nameserver:
+  - 114.114.114.114#DIRECT
+  - tls://223.5.5.5#DIRECT
+  - https://1.12.12.12/dns-query#DIRECT
+  proxy-server-nameserver:
+  - 114.114.114.114#DIRECT
+  - tls://223.5.5.5#DIRECT
+  - https://doh.pub/dns-query#DIRECT
+  nameserver:
+  - https://cloudflare-dns.com/dns-query#默认代理
+  - https://dns.google/dns-query#默认代理
+  nameserver-policy:
+    rule-set:private: system
+    rule-set:douyin:
+    - system
+    - 180.184.1.1
+    - 180.184.2.2
+    rule-set:cn:
+    - 223.5.5.5#DIRECT
+    - 119.29.29.29#DIRECT
+  direct-nameserver:
+  - 223.5.5.5#DIRECT
+  - 119.29.29.29#DIRECT
+  direct-nameserver-follow-policy: true
+
+hosts: #!replace
+  doh.pub:
+  - 1.12.12.12
+  - 120.53.53.53
+  cloudflare-dns.com:
+  - 1.1.1.1
+  - 1.0.0.1
+  dns.google:
+  - 8.8.8.8
+  - 8.8.4.4
+  services.googleapis.cn: services.googleapis.com
+  +.mcdn.bilivideo.com:
+  - 0.0.0.0
+  +.mcdn.bilivideo.cn:
+  - 0.0.0.0
+  +.edge.mountaintoys.cn:
+  - 0.0.0.0
+  +.h2.smtcdns.net:
+  - 0.0.0.0
+
+proxy-groups: #!replace
+  - name: 手动选择
+    type: select
+    interval: 600
+    timeout: 3000
+    url: https://www.apple.com/library/test/success.html
+    lazy: true
+    max-failed-times: 3
+    icon: https://fastly.jsdelivr.net/gh/AIsouler/MyClash@main/Icons/svg/Static.svg
+    include-all: true
+    filter: 群|返利|循环|官网|客服|网站|网址|获取|订阅|流量|到期|机场|下次|版本|官址|备用|过期|已用|联系|邮箱|工单|贩卖|通知|倒卖|防止|国内|地址|频道|电报|无法|说明|使用|提示|访问|支持|教程|关注|更新|作者|加入|超时|收藏|优惠|福利|邀请|好友|失联|选择|剩余|公益|发布|DIZTNA|通路|登录|禁止|定时|渠道|牢记|永久|余额|阁下|本站|刷新|导航|建议|重置|以下|过滤|⚠️|@|t\.me\/\+|\bexpire\b|\bhttps?:\/\/|\.com|\btraffic\b
+  - name: 自动选择
+    type: url-test
+    interval: 600
+    timeout: 3000
+    url: https://www.apple.com/library/test/success.html
+    lazy: true
+    max-failed-times: 3
+    icon: https://fastly.jsdelivr.net/gh/AIsouler/MyClash@main/Icons/svg/Auto.svg
+    tolerance: 50
+    include-all: true
+    filter: 群|返利|循环|官网|客服|网站|网址|获取|订阅|流量|到期|机场|下次|版本|官址|备用|过期|已用|联系|邮箱|工单|贩卖|通知|倒卖|防止|国内|地址|频道|电报|无法|说明|使用|提示|访问|支持|教程|关注|更新|作者|加入|超时|收藏|优惠|福利|邀请|好友|失联|选择|剩余|公益|发布|DIZTNA|通路|登录|禁止|定时|渠道|牢记|永久|余额|阁下|本站|刷新|导航|建议|重置|以下|过滤|⚠️|@|t\.me\/\+|\bexpire\b|\bhttps?:\/\/|\.com|\btraffic\b
+    hidden: true
+  - name: 负载均衡
+    type: load-balance
+    interval: 600
+    timeout: 3000
+    url: https://www.apple.com/library/test/success.html
+    lazy: true
+    max-failed-times: 3
+    icon: https://fastly.jsdelivr.net/gh/AIsouler/MyClash@main/Icons/svg/RoundRobin.svg
+    strategy: sticky-sessions
+    include-all: true
+    filter: 群|返利|循环|官网|客服|网站|网址|获取|订阅|流量|到期|机场|下次|版本|官址|备用|过期|已用|联系|邮箱|工单|贩卖|通知|倒卖|防止|国内|地址|频道|电报|无法|说明|使用|提示|访问|支持|教程|关注|更新|作者|加入|超时|收藏|优惠|福利|邀请|好友|失联|选择|剩余|公益|发布|DIZTNA|通路|登录|禁止|定时|渠道|牢记|永久|余额|阁下|本站|刷新|导航|建议|重置|以下|过滤|⚠️|@|t\.me\/\+|\bexpire\b|\bhttps?:\/\/|\.com|\btraffic\b
+    hidden: true
+  - name: 香港-自动选择
+    type: url-test
+    interval: 600
+    timeout: 3000
+    url: https://www.apple.com/library/test/success.html
+    lazy: true
+    max-failed-times: 3
+    icon: https://fastly.jsdelivr.net/gh/AIsouler/MyClash@main/Icons/svg/Auto.svg
+    tolerance: 50
+    include-all: true
+    filter: 🇭🇰|香港|(?<![A-Za-z])HKG?(?![A-Za-z])|hong\s*kong
+    hidden: true
+  - name: 香港
+    type: select
+    interval: 600
+    timeout: 3000
+    url: https://www.apple.com/library/test/success.html
+    lazy: true
+    max-failed-times: 3
+    icon: https://fastly.jsdelivr.net/gh/AIsouler/MyClash@main/Icons/svg/HongKong.svg
+    include-all: true
+    filter: 🇭🇰|香港|(?<![A-Za-z])HKG?(?![A-Za-z])|hong\s*kong
+    hidden: false
+  - name: 日本-自动选择
+    type: url-test
+    interval: 600
+    timeout: 3000
+    url: https://www.apple.com/library/test/success.html
+    lazy: true
+    max-failed-times: 3
+    icon: https://fastly.jsdelivr.net/gh/AIsouler/MyClash@main/Icons/svg/Auto.svg
+    tolerance: 50
+    include-all: true
+    filter: 🇯🇵|日本|东京|大阪|京都|(?<![A-Za-z])JPN?(?![A-Za-z])|japan
+    hidden: true
+  - name: 日本
+    type: select
+    interval: 600
+    timeout: 3000
+    url: https://www.apple.com/library/test/success.html
+    lazy: true
+    max-failed-times: 3
+    icon: https://fastly.jsdelivr.net/gh/AIsouler/MyClash@main/Icons/svg/Japan.svg
+    include-all: true
+    filter: 🇯🇵|日本|东京|大阪|京都|(?<![A-Za-z])JPN?(?![A-Za-z])|japan
+    hidden: false
+  - name: 美国-自动选择
+    type: url-test
+    interval: 600
+    timeout: 3000
+    url: https://www.apple.com/library/test/success.html
+    lazy: true
+    max-failed-times: 3
+    icon: https://fastly.jsdelivr.net/gh/AIsouler/MyClash@main/Icons/svg/Auto.svg
+    tolerance: 50
+    include-all: true
+    filter: 🇺🇸|美国|纽约|洛杉矶|旧金山|芝加哥|休斯顿|迈阿密|西雅图|波士顿|华盛顿|拉斯维加斯|圣何塞|圣地亚哥|(?<![A-Za-z])USA?(?![A-Za-z])|america|united\s*states
+    hidden: true
+  - name: 美国
+    type: select
+    interval: 600
+    timeout: 3000
+    url: https://www.apple.com/library/test/success.html
+    lazy: true
+    max-failed-times: 3
+    icon: https://fastly.jsdelivr.net/gh/AIsouler/MyClash@main/Icons/svg/America.svg
+    include-all: true
+    filter: 🇺🇸|美国|纽约|洛杉矶|旧金山|芝加哥|休斯顿|迈阿密|西雅图|波士顿|华盛顿|拉斯维加斯|圣何塞|圣地亚哥|(?<![A-Za-z])USA?(?![A-Za-z])|america|united\s*states
+    hidden: false
+  - name: 新加坡-自动选择
+    type: url-test
+    interval: 600
+    timeout: 3000
+    url: https://www.apple.com/library/test/success.html
+    lazy: true
+    max-failed-times: 3
+    icon: https://fastly.jsdelivr.net/gh/AIsouler/MyClash@main/Icons/svg/Auto.svg
+    tolerance: 50
+    include-all: true
+    filter: 🇸🇬|新加坡|狮城|(?<![A-Za-z])SGP?(?![A-Za-z])|singapore
+    hidden: true
+  - name: 新加坡
+    type: select
+    interval: 600
+    timeout: 3000
+    url: https://www.apple.com/library/test/success.html
+    lazy: true
+    max-failed-times: 3
+    icon: https://fastly.jsdelivr.net/gh/AIsouler/MyClash@main/Icons/svg/Singapore.svg
+    include-all: true
+    filter: 🇸🇬|新加坡|狮城|(?<![A-Za-z])SGP?(?![A-Za-z])|singapore
+    hidden: false
+  - name: 台湾省-自动选择
+    type: url-test
+    interval: 600
+    timeout: 3000
+    url: https://www.apple.com/library/test/success.html
+    lazy: true
+    max-failed-times: 3
+    icon: https://fastly.jsdelivr.net/gh/AIsouler/MyClash@main/Icons/svg/Auto.svg
+    tolerance: 50
+    include-all: true
+    filter: 🇹🇼|台湾|台北|高雄|(?<![A-Za-z])TWN?(?![A-Za-z])|taiwan
+    hidden: true
+  - name: 台湾省
+    type: select
+    interval: 600
+    timeout: 3000
+    url: https://www.apple.com/library/test/success.html
+    lazy: true
+    max-failed-times: 3
+    icon: https://fastly.jsdelivr.net/gh/AIsouler/MyClash@main/Icons/svg/Taiwan.svg
+    include-all: true
+    filter: 🇹🇼|台湾|台北|高雄|(?<![A-Za-z])TWN?(?![A-Za-z])|taiwan
+    hidden: false
+  - name: 低倍率节点
+    type: select
+    interval: 600
+    timeout: 3000
+    url: https://www.apple.com/library/test/success.html
+    lazy: true
+    max-failed-times: 3
+    icon: https://fastly.jsdelivr.net/gh/AIsouler/MyClash@main/Icons/svg/Available.svg
+    include-all: true
+    filter: ^(?!.*(?:剩|期)).*(?:(?<!\d)0(\.[0-5]|[*×✕✖⨯⨉x倍]))|(?:[*×✕✖⨯⨉x]0)|^(?!.*(?:客户端|软件)).*下载|低倍|免费|(?<![A-Za-z])free(?![A-Za-z])
+  - name: 高倍率节点
+    type: select
+    interval: 600
+    timeout: 3000
+    url: https://www.apple.com/library/test/success.html
+    lazy: true
+    max-failed-times: 3
+    icon: https://fastly.jsdelivr.net/gh/AIsouler/MyClash@main/Icons/svg/Airport.svg
+    include-all: true
+    filter: (?:[*×✕✖⨯⨉x](?:[2-9]\d*|[1-9]\d+)(?:\.\d+)?)|(?:(?<![\d.])(?:[2-9]\d*|[1-9]\d+)(?:\.\d+)?(?:倍|[*×✕✖⨯⨉x]))
+  - name: 直连
+    type: select
+    interval: 600
+    timeout: 3000
+    url: https://www.apple.com/library/test/success.html
+    lazy: true
+    max-failed-times: 3
+    icon: https://fastly.jsdelivr.net/gh/AIsouler/MyClash@main/Icons/svg/China.svg
+    proxies:
+    - DIRECT
+    - DIRECT
+    - DIRECT
+    - DIRECT
+    - DIRECT
+    hidden: false
+  - name: 默认代理
+    type: select
+    interval: 600
+    timeout: 3000
+    url: https://www.apple.com/library/test/success.html
+    lazy: true
+    max-failed-times: 3
+    icon: https://fastly.jsdelivr.net/gh/AIsouler/MyClash@main/Icons/svg/Proxy.svg
+    proxies:
+    - 香港
+    - 日本
+    - 美国
+    - 新加坡
+    - 台湾省
+    - 低倍率节点
+    - 高倍率节点
+    - 手动选择
+    - 自动选择
+    - 负载均衡
+  - name: 漏网之鱼
+    type: select
+    interval: 600
+    timeout: 3000
+    url: https://www.apple.com/library/test/success.html
+    lazy: true
+    max-failed-times: 3
+    icon: https://fastly.jsdelivr.net/gh/AIsouler/MyClash@main/Icons/svg/Stack.svg
+    proxies:
+    - 默认代理
+    - 直连
+    - 香港
+    - 日本
+    - 美国
+    - 新加坡
+    - 台湾省
+  - name: GLOBAL
+    type: select
+    interval: 600
+    timeout: 3000
+    url: https://www.apple.com/library/test/success.html
+    lazy: true
+    max-failed-times: 3
+    icon: https://fastly.jsdelivr.net/gh/AIsouler/MyClash@main/Icons/svg/Global.svg
+    proxies:
+    - 默认代理
+    - 手动选择
+    - 自动选择
+    - 负载均衡
+    - 香港
+    - 日本
+    - 美国
+    - 新加坡
+    - 台湾省
+    - 低倍率节点
+    - 高倍率节点
+    - 直连
+    - 漏网之鱼
+  - name: FCM
+    type: select
+    interval: 600
+    timeout: 3000
+    url: https://www.apple.com/library/test/success.html
+    lazy: true
+    max-failed-times: 3
+    icon: https://fastly.jsdelivr.net/gh/AIsouler/MyClash@main/Icons/svg/Fcm.svg
+    proxies:
+    - 默认代理
+    - 手动选择
+    - 自动选择
+    - 负载均衡
+    - 香港
+    - 日本
+    - 美国
+    - 新加坡
+    - 台湾省
+    - 低倍率节点
+    - 高倍率节点
+    - 直连
+  - name: YouTube
+    type: select
+    interval: 600
+    timeout: 3000
+    url: https://www.apple.com/library/test/success.html
+    lazy: true
+    max-failed-times: 3
+    icon: https://fastly.jsdelivr.net/gh/AIsouler/MyClash@main/Icons/svg/YouTube.svg
+    proxies:
+    - 默认代理
+    - 手动选择
+    - 自动选择
+    - 负载均衡
+    - 香港
+    - 日本
+    - 美国
+    - 新加坡
+    - 台湾省
+    - 低倍率节点
+    - 高倍率节点
+    - 直连
+  - name: Google
+    type: select
+    interval: 600
+    timeout: 3000
+    url: https://www.apple.com/library/test/success.html
+    lazy: true
+    max-failed-times: 3
+    icon: https://fastly.jsdelivr.net/gh/AIsouler/MyClash@main/Icons/svg/Google.svg
+    proxies:
+    - 默认代理
+    - 手动选择
+    - 自动选择
+    - 负载均衡
+    - 香港
+    - 日本
+    - 美国
+    - 新加坡
+    - 台湾省
+    - 低倍率节点
+    - 高倍率节点
+    - 直连
+  - name: AI
+    type: select
+    interval: 600
+    timeout: 3000
+    url: https://www.apple.com/library/test/success.html
+    lazy: true
+    max-failed-times: 3
+    icon: https://fastly.jsdelivr.net/gh/AIsouler/MyClash@main/Icons/svg/OpenAI.svg
+    proxies:
+    - 默认代理
+    - 手动选择
+    - 自动选择
+    - 负载均衡
+    - 香港
+    - 日本
+    - 美国
+    - 新加坡
+    - 台湾省
+    - 低倍率节点
+    - 高倍率节点
+    - 直连
+  - name: Microsoft
+    type: select
+    interval: 600
+    timeout: 3000
+    url: https://www.apple.com/library/test/success.html
+    lazy: true
+    max-failed-times: 3
+    icon: https://fastly.jsdelivr.net/gh/AIsouler/MyClash@main/Icons/svg/Microsoft.svg
+    proxies:
+    - 默认代理
+    - 手动选择
+    - 自动选择
+    - 负载均衡
+    - 香港
+    - 日本
+    - 美国
+    - 新加坡
+    - 台湾省
+    - 低倍率节点
+    - 高倍率节点
+    - 直连
+  - name: Apple
+    type: select
+    interval: 600
+    timeout: 3000
+    url: https://www.apple.com/library/test/success.html
+    lazy: true
+    max-failed-times: 3
+    icon: https://fastly.jsdelivr.net/gh/AIsouler/MyClash@main/Icons/svg/Apple.svg
+    proxies:
+    - 默认代理
+    - 手动选择
+    - 自动选择
+    - 负载均衡
+    - 香港
+    - 日本
+    - 美国
+    - 新加坡
+    - 台湾省
+    - 低倍率节点
+    - 高倍率节点
+    - 直连
+  - name: Telegram
+    type: select
+    interval: 600
+    timeout: 3000
+    url: https://www.apple.com/library/test/success.html
+    lazy: true
+    max-failed-times: 3
+    icon: https://fastly.jsdelivr.net/gh/AIsouler/MyClash@main/Icons/svg/Telegram.svg
+    proxies:
+    - 默认代理
+    - 手动选择
+    - 自动选择
+    - 负载均衡
+    - 香港
+    - 日本
+    - 美国
+    - 新加坡
+    - 台湾省
+    - 低倍率节点
+    - 高倍率节点
+    - 直连
+  - name: Steam
+    type: select
+    interval: 600
+    timeout: 3000
+    url: https://www.apple.com/library/test/success.html
+    lazy: true
+    max-failed-times: 3
+    icon: https://fastly.jsdelivr.net/gh/AIsouler/MyClash@main/Icons/svg/Steam.svg
+    proxies:
+    - 默认代理
+    - 手动选择
+    - 自动选择
+    - 负载均衡
+    - 香港
+    - 日本
+    - 美国
+    - 新加坡
+    - 台湾省
+    - 低倍率节点
+    - 高倍率节点
+    - 直连
+  - name: TikTok
+    type: select
+    interval: 600
+    timeout: 3000
+    url: https://www.apple.com/library/test/success.html
+    lazy: true
+    max-failed-times: 3
+    icon: https://fastly.jsdelivr.net/gh/AIsouler/MyClash@main/Icons/svg/TikTok.svg
+    proxies:
+    - 默认代理
+    - 手动选择
+    - 自动选择
+    - 负载均衡
+    - 香港
+    - 日本
+    - 美国
+    - 新加坡
+    - 台湾省
+    - 低倍率节点
+    - 高倍率节点
+    - 直连
+  - name: Twitter
+    type: select
+    interval: 600
+    timeout: 3000
+    url: https://www.apple.com/library/test/success.html
+    lazy: true
+    max-failed-times: 3
+    icon: https://fastly.jsdelivr.net/gh/AIsouler/MyClash@main/Icons/svg/Twitter.svg
+    proxies:
+    - 默认代理
+    - 手动选择
+    - 自动选择
+    - 负载均衡
+    - 香港
+    - 日本
+    - 美国
+    - 新加坡
+    - 台湾省
+    - 低倍率节点
+    - 高倍率节点
+    - 直连
+  - name: Meta
+    type: select
+    interval: 600
+    timeout: 3000
+    url: https://www.apple.com/library/test/success.html
+    lazy: true
+    max-failed-times: 3
+    icon: https://fastly.jsdelivr.net/gh/AIsouler/MyClash@main/Icons/svg/Meta.svg
+    proxies:
+    - 默认代理
+    - 手动选择
+    - 自动选择
+    - 负载均衡
+    - 香港
+    - 日本
+    - 美国
+    - 新加坡
+    - 台湾省
+    - 低倍率节点
+    - 高倍率节点
+    - 直连
+  - name: Line
+    type: select
+    interval: 600
+    timeout: 3000
+    url: https://www.apple.com/library/test/success.html
+    lazy: true
+    max-failed-times: 3
+    icon: https://fastly.jsdelivr.net/gh/AIsouler/MyClash@main/Icons/svg/Line.svg
+    proxies:
+    - 默认代理
+    - 手动选择
+    - 自动选择
+    - 负载均衡
+    - 香港
+    - 日本
+    - 美国
+    - 新加坡
+    - 台湾省
+    - 低倍率节点
+    - 高倍率节点
+    - 直连
+  - name: Netflix
+    type: select
+    interval: 600
+    timeout: 3000
+    url: https://www.apple.com/library/test/success.html
+    lazy: true
+    max-failed-times: 3
+    icon: https://fastly.jsdelivr.net/gh/AIsouler/MyClash@main/Icons/svg/Netflix.svg
+    proxies:
+    - 默认代理
+    - 手动选择
+    - 自动选择
+    - 负载均衡
+    - 香港
+    - 日本
+    - 美国
+    - 新加坡
+    - 台湾省
+    - 低倍率节点
+    - 高倍率节点
+    - 直连
+  - name: Emby
+    type: select
+    interval: 600
+    timeout: 3000
+    url: https://www.apple.com/library/test/success.html
+    lazy: true
+    max-failed-times: 3
+    icon: https://fastly.jsdelivr.net/gh/AIsouler/MyClash@main/Icons/svg/Emby.svg
+    proxies:
+    - 默认代理
+    - 手动选择
+    - 自动选择
+    - 负载均衡
+    - 香港
+    - 日本
+    - 美国
+    - 新加坡
+    - 台湾省
+    - 低倍率节点
+    - 高倍率节点
+    - 直连
+  - name: PikPak
+    type: select
+    interval: 600
+    timeout: 3000
+    url: https://www.apple.com/library/test/success.html
+    lazy: true
+    max-failed-times: 3
+    icon: https://fastly.jsdelivr.net/gh/AIsouler/MyClash@main/Icons/svg/PikPak.svg
+    proxies:
+    - 默认代理
+    - 手动选择
+    - 自动选择
+    - 负载均衡
+    - 香港
+    - 日本
+    - 美国
+    - 新加坡
+    - 台湾省
+    - 低倍率节点
+    - 高倍率节点
+    - 直连
+  - name: Spotify
+    type: select
+    interval: 600
+    timeout: 3000
+    url: https://www.apple.com/library/test/success.html
+    lazy: true
+    max-failed-times: 3
+    icon: https://fastly.jsdelivr.net/gh/AIsouler/MyClash@main/Icons/svg/Spotify.svg
+    proxies:
+    - 默认代理
+    - 手动选择
+    - 自动选择
+    - 负载均衡
+    - 香港
+    - 日本
+    - 美国
+    - 新加坡
+    - 台湾省
+    - 低倍率节点
+    - 高倍率节点
+    - 直连
+  - name: Crypto
+    type: select
+    interval: 600
+    timeout: 3000
+    url: https://www.apple.com/library/test/success.html
+    lazy: true
+    max-failed-times: 3
+    icon: https://fastly.jsdelivr.net/gh/AIsouler/MyClash@main/Icons/svg/Bitcoin.svg
+    proxies:
+    - 默认代理
+    - 手动选择
+    - 自动选择
+    - 负载均衡
+    - 香港
+    - 日本
+    - 美国
+    - 新加坡
+    - 台湾省
+    - 低倍率节点
+    - 高倍率节点
+    - 直连
+  - name: PayPal
+    type: select
+    interval: 600
+    timeout: 3000
+    url: https://www.apple.com/library/test/success.html
+    lazy: true
+    max-failed-times: 3
+    icon: https://fastly.jsdelivr.net/gh/AIsouler/MyClash@main/Icons/svg/PayPal.svg
+    proxies:
+    - 默认代理
+    - 手动选择
+    - 自动选择
+    - 负载均衡
+    - 香港
+    - 日本
+    - 美国
+    - 新加坡
+    - 台湾省
+    - 低倍率节点
+    - 高倍率节点
+    - 直连
+  - name: Patreon
+    type: select
+    interval: 600
+    timeout: 3000
+    url: https://www.apple.com/library/test/success.html
+    lazy: true
+    max-failed-times: 3
+    icon: https://fastly.jsdelivr.net/gh/AIsouler/MyClash@main/Icons/svg/Patreon.svg
+    proxies:
+    - 默认代理
+    - 手动选择
+    - 自动选择
+    - 负载均衡
+    - 香港
+    - 日本
+    - 美国
+    - 新加坡
+    - 台湾省
+    - 低倍率节点
+    - 高倍率节点
+    - 直连
+  - name: EHentai
+    type: select
+    interval: 600
+    timeout: 3000
+    url: https://www.apple.com/library/test/success.html
+    lazy: true
+    max-failed-times: 3
+    icon: https://fastly.jsdelivr.net/gh/AIsouler/MyClash@main/Icons/svg/EHentai.svg
+    proxies:
+    - 默认代理
+    - 手动选择
+    - 自动选择
+    - 负载均衡
+    - 香港
+    - 日本
+    - 美国
+    - 新加坡
+    - 台湾省
+    - 低倍率节点
+    - 高倍率节点
+    - 直连
+  - name: AdBlock
+    type: select
+    interval: 600
+    timeout: 3000
+    url: https://www.apple.com/library/test/success.html
+    lazy: true
+    max-failed-times: 3
+    icon: https://fastly.jsdelivr.net/gh/AIsouler/MyClash@main/Icons/svg/AdBlock.svg
+    proxies:
+    - REJECT
+    - REJECT-DROP
+    - PASS
+
+rule-providers: #!replace
+  private:
+    type: http
+    format: mrs
+    interval: 86400
+    behavior: domain
+    url: https://fastly.jsdelivr.net/gh/appshubcc/bett-rules@meta/geo/geosite/private.mrs
+    path: ./ruleset/private.mrs
+  private_ip:
+    type: http
+    format: mrs
+    interval: 86400
+    behavior: ipcidr
+    url: https://fastly.jsdelivr.net/gh/appshubcc/bett-rules@meta/geo/geoip/private.mrs
+    path: ./ruleset/private_ip.mrs
+  games_cn:
+    type: http
+    format: mrs
+    interval: 86400
+    behavior: domain
+    url: https://fastly.jsdelivr.net/gh/appshubcc/bett-rules@meta/geo/geosite/category-games@cn.mrs
+    path: ./ruleset/games_cn.mrs
+  epicgames:
+    type: http
+    format: mrs
+    interval: 86400
+    behavior: domain
+    url: https://fastly.jsdelivr.net/gh/appshubcc/bett-rules@meta/geo/geosite/epicgames.mrs
+    path: ./ruleset/epicgames.mrs
+  nvidia_cn:
+    type: http
+    format: mrs
+    interval: 86400
+    behavior: domain
+    url: https://fastly.jsdelivr.net/gh/appshubcc/bett-rules@meta/geo/geosite/nvidia@cn.mrs
+    path: ./ruleset/nvidia_cn.mrs
+  apple_cn:
+    type: http
+    format: mrs
+    interval: 86400
+    behavior: domain
+    url: https://fastly.jsdelivr.net/gh/appshubcc/bett-rules@meta/geo/geosite/apple@cn.mrs
+    path: ./ruleset/apple_cn.mrs
+  microsoft_cn:
+    type: http
+    format: mrs
+    interval: 86400
+    behavior: domain
+    url: https://fastly.jsdelivr.net/gh/appshubcc/bett-rules@meta/geo/geosite/microsoft@cn.mrs
+    path: ./ruleset/microsoft_cn.mrs
+  geolocation-cn:
+    type: http
+    format: mrs
+    interval: 86400
+    behavior: domain
+    url: https://fastly.jsdelivr.net/gh/appshubcc/bett-rules@meta/geo/geosite/geolocation-cn.mrs
+    path: ./ruleset/geolocation-cn.mrs
+  cn_ip:
+    type: http
+    format: mrs
+    interval: 86400
+    behavior: ipcidr
+    url: https://fastly.jsdelivr.net/gh/appshubcc/bett-rules@meta/geo/geoip/cn.mrs
+    path: ./ruleset/cn_ip.mrs
+  geolocation-!cn:
+    type: http
+    format: mrs
+    interval: 86400
+    behavior: domain
+    url: https://fastly.jsdelivr.net/gh/appshubcc/bett-rules@meta/geo/geosite/geolocation-!cn.mrs
+    path: ./ruleset/geolocation-!cn.mrs
+  fakeip_filter:
+    type: http
+    format: mrs
+    interval: 86400
+    behavior: domain
+    url: https://fastly.jsdelivr.net/gh/appshubcc/bett-rules@meta/geo/geosite/fakeip-filter.mrs
+    path: ./ruleset/fakeip_filter.mrs
+  cn:
+    type: http
+    format: mrs
+    interval: 86400
+    behavior: domain
+    url: https://fastly.jsdelivr.net/gh/appshubcc/bett-rules@meta/geo/geosite/cn.mrs
+    path: ./ruleset/cn.mrs
+  douyin:
+    type: http
+    format: mrs
+    interval: 86400
+    behavior: domain
+    url: https://fastly.jsdelivr.net/gh/appshubcc/bett-rules@meta/geo/geosite/douyin.mrs
+    path: ./ruleset/douyin.mrs
+  googlefcm:
+    type: http
+    format: mrs
+    interval: 86400
+    behavior: domain
+    url: https://fastly.jsdelivr.net/gh/appshubcc/bett-rules@meta/geo/geosite/googlefcm.mrs
+    path: ./ruleset/googlefcm.mrs
+  youtube:
+    type: http
+    format: mrs
+    interval: 86400
+    behavior: domain
+    url: https://fastly.jsdelivr.net/gh/appshubcc/bett-rules@meta/geo/geosite/youtube.mrs
+    path: ./ruleset/youtube.mrs
+  google:
+    type: http
+    format: mrs
+    interval: 86400
+    behavior: domain
+    url: https://fastly.jsdelivr.net/gh/appshubcc/bett-rules@meta/geo/geosite/google.mrs
+    path: ./ruleset/google.mrs
+  google_ip:
+    type: http
+    format: mrs
+    interval: 86400
+    behavior: ipcidr
+    url: https://fastly.jsdelivr.net/gh/appshubcc/bett-rules@meta/geo/geoip/google.mrs
+    path: ./ruleset/google_ip.mrs
+  ai:
+    type: http
+    format: mrs
+    interval: 86400
+    behavior: domain
+    url: https://fastly.jsdelivr.net/gh/appshubcc/bett-rules@meta/geo/geosite/category-ai-!cn.mrs
+    path: ./ruleset/ai.mrs
+  github:
+    type: http
+    format: mrs
+    interval: 86400
+    behavior: domain
+    url: https://fastly.jsdelivr.net/gh/appshubcc/bett-rules@meta/geo/geosite/github.mrs
+    path: ./ruleset/github.mrs
+  microsoft:
+    type: http
+    format: mrs
+    interval: 86400
+    behavior: domain
+    url: https://fastly.jsdelivr.net/gh/appshubcc/bett-rules@meta/geo/geosite/microsoft.mrs
+    path: ./ruleset/microsoft.mrs
+  microsoft_ip:
+    type: http
+    format: mrs
+    interval: 86400
+    behavior: ipcidr
+    url: https://fastly.jsdelivr.net/gh/appshubcc/bett-rules@meta/geo/geoip/microsoft.mrs
+    path: ./ruleset/microsoft_ip.mrs
+  apple:
+    type: http
+    format: mrs
+    interval: 86400
+    behavior: domain
+    url: https://fastly.jsdelivr.net/gh/appshubcc/bett-rules@meta/geo/geosite/apple.mrs
+    path: ./ruleset/apple.mrs
+  apple_ip:
+    type: http
+    format: mrs
+    interval: 86400
+    behavior: ipcidr
+    url: https://fastly.jsdelivr.net/gh/appshubcc/bett-rules@meta/geo/geoip/apple.mrs
+    path: ./ruleset/apple_ip.mrs
+  telegram:
+    type: http
+    format: mrs
+    interval: 86400
+    behavior: domain
+    url: https://fastly.jsdelivr.net/gh/appshubcc/bett-rules@meta/geo/geosite/telegram.mrs
+    path: ./ruleset/telegram.mrs
+  telegram_ip:
+    type: http
+    format: mrs
+    interval: 86400
+    behavior: ipcidr
+    url: https://fastly.jsdelivr.net/gh/appshubcc/bett-rules@meta/geo/geoip/telegram.mrs
+    path: ./ruleset/telegram_ip.mrs
+  steam:
+    type: http
+    format: mrs
+    interval: 86400
+    behavior: domain
+    url: https://fastly.jsdelivr.net/gh/appshubcc/bett-rules@meta/geo/geosite/steam.mrs
+    path: ./ruleset/steam.mrs
+  steam_ip:
+    type: http
+    format: mrs
+    interval: 86400
+    behavior: ipcidr
+    url: https://fastly.jsdelivr.net/gh/appshubcc/bett-rules@meta/geo/geoip/steam.mrs
+    path: ./ruleset/steam_ip.mrs
+  tiktok:
+    type: http
+    format: mrs
+    interval: 86400
+    behavior: domain
+    url: https://fastly.jsdelivr.net/gh/appshubcc/bett-rules@meta/geo/geosite/tiktok.mrs
+    path: ./ruleset/tiktok.mrs
+  tiktok_ip:
+    type: http
+    format: mrs
+    interval: 86400
+    behavior: ipcidr
+    url: https://fastly.jsdelivr.net/gh/appshubcc/bett-rules@meta/geo/geoip/tiktok.mrs
+    path: ./ruleset/tiktok_ip.mrs
+  twitter:
+    type: http
+    format: mrs
+    interval: 86400
+    behavior: domain
+    url: https://fastly.jsdelivr.net/gh/appshubcc/bett-rules@meta/geo/geosite/twitter.mrs
+    path: ./ruleset/twitter.mrs
+  twitter_ip:
+    type: http
+    format: mrs
+    interval: 86400
+    behavior: ipcidr
+    url: https://fastly.jsdelivr.net/gh/appshubcc/bett-rules@meta/geo/geoip/twitter.mrs
+    path: ./ruleset/twitter_ip.mrs
+  meta:
+    type: http
+    format: mrs
+    interval: 86400
+    behavior: domain
+    url: https://fastly.jsdelivr.net/gh/appshubcc/bett-rules@meta/geo/geosite/meta.mrs
+    path: ./ruleset/meta.mrs
+  facebook_ip:
+    type: http
+    format: mrs
+    interval: 86400
+    behavior: ipcidr
+    url: https://fastly.jsdelivr.net/gh/appshubcc/bett-rules@meta/geo/geoip/facebook.mrs
+    path: ./ruleset/facebook_ip.mrs
+  line:
+    type: http
+    format: mrs
+    interval: 86400
+    behavior: domain
+    url: https://fastly.jsdelivr.net/gh/appshubcc/bett-rules@meta/geo/geosite/line.mrs
+    path: ./ruleset/line.mrs
+  netflix:
+    type: http
+    format: mrs
+    interval: 86400
+    behavior: domain
+    url: https://fastly.jsdelivr.net/gh/appshubcc/bett-rules@meta/geo/geosite/netflix.mrs
+    path: ./ruleset/netflix.mrs
+  netflix_ip:
+    type: http
+    format: mrs
+    interval: 86400
+    behavior: ipcidr
+    url: https://fastly.jsdelivr.net/gh/appshubcc/bett-rules@meta/geo/geoip/netflix.mrs
+    path: ./ruleset/netflix_ip.mrs
+  emby:
+    type: http
+    format: mrs
+    interval: 86400
+    behavior: domain
+    url: https://fastly.jsdelivr.net/gh/appshubcc/bett-rules@meta/geo/geosite/category-emby.mrs
+    path: ./ruleset/emby.mrs
+  pikpak:
+    type: http
+    format: mrs
+    interval: 86400
+    behavior: domain
+    url: https://fastly.jsdelivr.net/gh/appshubcc/bett-rules@meta/geo/geosite/pikpak.mrs
+    path: ./ruleset/pikpak.mrs
+  spotify:
+    type: http
+    format: mrs
+    interval: 86400
+    behavior: domain
+    url: https://fastly.jsdelivr.net/gh/appshubcc/bett-rules@meta/geo/geosite/spotify.mrs
+    path: ./ruleset/spotify.mrs
+  spotify_ip:
+    type: http
+    format: mrs
+    interval: 86400
+    behavior: ipcidr
+    url: https://fastly.jsdelivr.net/gh/appshubcc/bett-rules@meta/geo/geoip/spotify.mrs
+    path: ./ruleset/spotify_ip.mrs
+  cryptocurrency:
+    type: http
+    format: mrs
+    interval: 86400
+    behavior: domain
+    url: https://fastly.jsdelivr.net/gh/appshubcc/bett-rules@meta/geo/geosite/category-cryptocurrency.mrs
+    path: ./ruleset/cryptocurrency.mrs
+  paypal:
+    type: http
+    format: mrs
+    interval: 86400
+    behavior: domain
+    url: https://fastly.jsdelivr.net/gh/appshubcc/bett-rules@meta/geo/geosite/paypal.mrs
+    path: ./ruleset/paypal.mrs
+  patreon:
+    type: http
+    format: mrs
+    interval: 86400
+    behavior: domain
+    url: https://fastly.jsdelivr.net/gh/appshubcc/bett-rules@meta/geo/geosite/patreon.mrs
+    path: ./ruleset/patreon.mrs
+  ehentai:
+    type: http
+    format: mrs
+    interval: 86400
+    behavior: domain
+    url: https://fastly.jsdelivr.net/gh/appshubcc/bett-rules@meta/geo/geosite/ehentai.mrs
+    path: ./ruleset/ehentai.mrs
+  category-ads:
+    type: http
+    format: mrs
+    interval: 86400
+    behavior: domain
+    url: https://fastly.jsdelivr.net/gh/appshubcc/bett-rules@meta/geo/geosite/category-ads.mrs
+    path: ./ruleset/category-ads.mrs
+  cn_additional:
+    type: http
+    format: mrs
+    interval: 86400
+    behavior: domain
+    url: https://static-file-global.353355.xyz/rules/cn-additional-list.mrs
+    path: ./ruleset/cn_additional.mrs
+    path-in-bundle: geo/geosite/cn.mrs
+  emos:
+    type: http
+    format: mrs
+    interval: 86400
+    behavior: domain
+    url: https://fastly.jsdelivr.net/gh/binaryu/emos-proxy-rule@main/rules/emos-mihomo.mrs
+    path: ./ruleset/emos.mrs
+    path-in-bundle: geo/geosite/category-emby.mrs
+
+rules: #!replace
+  - RULE-SET,private,直连
+  - RULE-SET,geolocation-cn,直连
+  - RULE-SET,games_cn,直连
+  - RULE-SET,epicgames,直连
+  - RULE-SET,nvidia_cn,直连
+  - RULE-SET,apple_cn,直连
+  - RULE-SET,microsoft_cn,直连
+  - DOMAIN,fsend.cn,直连
+  - DOMAIN,international-gfe.download.nvidia.com,直连
+  - RULE-SET,category-ads,AdBlock
+  - RULE-SET,googlefcm,FCM
+  - RULE-SET,youtube,YouTube
+  - RULE-SET,google,Google
+  - RULE-SET,google_ip,Google,no-resolve
+  - RULE-SET,ai,AI
+  - RULE-SET,github,默认代理
+  - RULE-SET,microsoft,Microsoft
+  - RULE-SET,microsoft_ip,Microsoft,no-resolve
+  - RULE-SET,apple,Apple
+  - RULE-SET,apple_ip,Apple,no-resolve
+  - RULE-SET,telegram,Telegram
+  - RULE-SET,telegram_ip,Telegram,no-resolve
+  - RULE-SET,steam,Steam
+  - RULE-SET,steam_ip,Steam,no-resolve
+  - RULE-SET,tiktok,TikTok
+  - RULE-SET,tiktok_ip,TikTok,no-resolve
+  - RULE-SET,twitter,Twitter
+  - RULE-SET,twitter_ip,Twitter,no-resolve
+  - RULE-SET,meta,Meta
+  - RULE-SET,facebook_ip,Meta,no-resolve
+  - RULE-SET,line,Line
+  - RULE-SET,netflix,Netflix
+  - RULE-SET,netflix_ip,Netflix,no-resolve
+  - RULE-SET,emby,Emby
+  - RULE-SET,emos,Emby
+  - DOMAIN-KEYWORD,emby,Emby
+  - PROCESS-NAME,tv.emby.embyatv,Emby
+  - RULE-SET,pikpak,PikPak
+  - RULE-SET,spotify,Spotify
+  - RULE-SET,spotify_ip,Spotify,no-resolve
+  - RULE-SET,cryptocurrency,Crypto
+  - RULE-SET,paypal,PayPal
+  - RULE-SET,patreon,Patreon
+  - RULE-SET,ehentai,EHentai
+  - AND,((NETWORK,UDP),(DST-PORT,443),(NOT,((OR,((RULE-SET,cn_additional),(RULE-SET,cn_ip,no-resolve)))))),REJECT
+  - RULE-SET,geolocation-!cn,默认代理
+  - RULE-SET,cn_ip,直连
+  - RULE-SET,private_ip,直连
+  - MATCH,漏网之鱼
